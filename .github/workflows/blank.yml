@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>CRUD List — HTML • CSS • JS (no libraries)</title>
+  <style>
+    :root{
+      --bg:#0f172a;        /* slate-900 */
+      --panel:#111827;     /* gray-900 */
+      --muted:#94a3b8;     /* slate-400 */
+      --text:#e5e7eb;      /* gray-200 */
+      --accent:#22c55e;    /* green-500 */
+      --accent-2:#3b82f6;  /* blue-500 */
+      --danger:#ef4444;    /* red-500 */
+      --warning:#f59e0b;   /* amber-500 */
+      --ring:#334155;      /* slate-700 */
+      --shadow: 0 10px 30px rgba(0,0,0,.35);
+      --radius: 16px;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji", "Segoe UI Emoji";
+      background: radial-gradient(1200px 600px at 20% -10%, #1e293b 10%, transparent 60%),
+                  radial-gradient(800px 500px at 120% 10%, #111827 10%, transparent 60%),
+                  var(--bg);
+      color:var(--text);
+      display:grid; place-items:center; padding:32px;
+    }
+    .app{
+      width:min(950px, 92vw); background:linear-gradient(180deg, #0b1022, #0b1022cc 50%, #0b1022);
+      border:1px solid #1f2937; border-radius:var(--radius); box-shadow:var(--shadow);
+      overflow:hidden;
+    }
+    header{
+      padding:28px 28px 16px; border-bottom:1px solid #1f2937; position:relative;
+    }
+    header h1{margin:0;font-size:24px;letter-spacing:.4px}
+    .row{display:flex; gap:12px; align-items:center; flex-wrap:wrap}
+    .input{
+      flex:1; display:flex; gap:10px; align-items:center; background:#0b1220; border:1px solid #1f2937;
+      padding:10px 12px; border-radius:12px;
+    }
+    .input input[type="text"]{
+      background:transparent; border:0; outline:none; color:var(--text); width:100%; font-size:16px;
+    }
+    .btn{
+      appearance:none; border:1px solid #1f2937; background:#0b1220; color:var(--text);
+      padding:10px 14px; border-radius:12px; cursor:pointer; transition:transform .04s ease, background .2s ease, border-color .2s ease;
+    }
+    .btn:hover{background:#0f172a; border-color:#334155}
+    .btn:active{transform:translateY(1px)}
+    .btn.primary{background:linear-gradient(180deg, #16a34a, #22c55e); border:0; color:#03200e; font-weight:700}
+    .btn.primary:hover{filter:brightness(1.05)}
+    .btn.ghost{background:transparent}
+
+    .toolbar{padding:12px 16px; display:flex; flex-wrap:wrap; gap:10px; align-items:center; border-bottom:1px solid #1f2937;}
+    .toolbar .filters{display:flex; gap:8px}
+    .chip{
+      padding:8px 12px; border-radius:999px; border:1px solid #253046; background:#0b1220; cursor:pointer; font-size:13px; color:var(--muted);
+    }
+    .chip.active{border-color:var(--accent-2); color:#cfe0ff}
+    .search{margin-left:auto; display:flex; gap:8px; align-items:center; background:#0b1220; border:1px solid #1f2937; padding:8px 12px; border-radius:999px}
+    .search input{background:transparent; border:0; outline:none; color:var(--text)}
+
+    ul.list{list-style:none; margin:0; padding:0}
+    .empty{padding:30px; text-align:center; color:var(--muted)}
+
+    .item{display:grid; grid-template-columns:auto 1fr auto auto; gap:10px; align-items:center; padding:14px 18px; border-bottom:1px solid #101826; background:linear-gradient(180deg, #0a0f1d, #0b1222);
+    }
+    .item[draggable="true"]{user-select:none}
+    .item.dragging{opacity:.5; border:1px dashed #334155}
+
+    .check{display:flex; align-items:center; gap:10px}
+    .check input{width:18px; height:18px}
+
+    .title{font-size:16px}
+    .title.done{color:#94a3b8; text-decoration:line-through;}
+    .meta{font-size:12px; color:var(--muted)}
+
+    .actions{display:flex; gap:8px}
+    .icon-btn{
+      background:transparent; border:1px solid #1f2937; border-radius:10px; padding:8px; cursor:pointer; color:var(--muted)
+    }
+    .icon-btn:hover{border-color:#334155; color:#cbd5e1}
+    .icon-btn.danger{color:#fecaca; border-color:#7f1d1d}
+    .icon-btn.danger:hover{background:#1b0f12; color:#fca5a5}
+
+    footer{display:flex; justify-content:space-between; align-items:center; padding:16px 18px; color:var(--muted)}
+
+    /* Editable input style */
+    .edit-input{
+      width:100%; background:#0b1220; color:var(--text); border:1px solid #1f2937; border-radius:10px; padding:8px 10px; font-size:15px
+    }
+
+    details.tests {border-top:1px dashed #1f2937;}
+    details.tests summary {cursor:pointer; padding:10px 16px; color:#cbd5e1}
+    #testOutput {white-space:pre-wrap; padding:0 16px 16px; color:#cbd5e1;}
+
+    @media (max-width:640px){
+      .item{grid-template-columns:auto 1fr auto}
+      .meta{display:none}
+      .search{flex:1; margin-left:0}
+    }
+  </style>
+</head>
+<body>
+  <div class="app" role="application" aria-label="CRUD List App">
+    <header>
+      <div class="row" style="justify-content:space-between;align-items:flex-end">
+        <div>
+          <h1>CRUD List</h1>
+          <div class="meta" id="stats">0 items</div>
+        </div>
+        <div class="row">
+          <button class="btn ghost" id="exportBtn" title="Export as JSON">Export</button>
+          <button class="btn ghost" id="testBtn" title="Run built-in tests">Run tests</button>
+        </div>
+      </div>
+      <form id="createForm" class="row" aria-label="Create item" style="margin-top:14px">
+        <div class="input" style="min-width:260px">
+          <input id="newText" type="text" placeholder="Add a new item… (press Enter)" required minlength="1" />
+        </div>
+        <button class="btn primary" type="submit">Add</button>
+        <button class="btn" type="button" id="clearCompletedBtn" title="Remove completed items">Clear completed</button>
+        <button class="btn" type="button" id="deleteAllBtn" title="Delete ALL items">Delete all</button>
+      </form>
+    </header>
+
+    <div class="toolbar">
+      <div class="filters" role="tablist" aria-label="Filters">
+        <button class="chip active" data-filter="all" role="tab" aria-selected="true">All</button>
+        <button class="chip" data-filter="active" role="tab" aria-selected="false">Active</button>
+        <button class="chip" data-filter="done" role="tab" aria-selected="false">Completed</button>
+      </div>
+      <label class="search" aria-label="Search items">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M21 21l-4.35-4.35" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="2"/></svg>
+        <input id="searchInput" type="search" placeholder="Search…" />
+      </label>
+    </div>
+
+    <ul id="list" class="list" aria-live="polite"></ul>
+
+    <div id="emptyState" class="empty">No items yet. Add your first one above ✨</div>
+
+    <footer>
+      <div>Drag to reorder • Double‑click an item to edit</div>
+      <div>Saved to your browser (localStorage)</div>
+    </footer>
+  </div>
+
+  <details class="tests" id="tests">
+    <summary>Test results (click to expand)</summary>
+    <pre id="testOutput">No tests run yet. Click "Run tests" above.</pre>
+  </details>
+
+  <template id="itemTemplate">
+    <li class="item" draggable="true">
+      <label class="check">
+        <input type="checkbox" class="toggle" aria-label="Toggle complete" />
+      </label>
+      <div>
+        <div class="title"></div>
+        <div class="meta"></div>
+      </div>
+      <div class="actions">
+        <button class="icon-btn edit" title="Edit" aria-label="Edit">✏️</button>
+        <button class="icon-btn danger delete" title="Delete" aria-label="Delete">🗑️</button>
+      </div>
+    </li>
+  </template>
+
+  <script>
+  // --- Simple CRUD list with localStorage persistence (no libraries) ---
+  const $ = (sel, root=document) => root.querySelector(sel);
+  const $$ = (sel, root=document) => Array.from(root.querySelectorAll(sel));
+
+  const STORAGE_KEY = 'crud-list:v1';
+  let items = load();
+  let filter = 'all';
+  let search = '';
+
+  const els = {
+    form: $('#createForm'),
+    input: $('#newText'),
+    list: $('#list'),
+    empty: $('#emptyState'),
+    stats: $('#stats'),
+    chips: $$('.chip'),
+    search: $('#searchInput'),
+    clearCompleted: $('#clearCompletedBtn'),
+    deleteAll: $('#deleteAllBtn'),
+    exportBtn: $('#exportBtn'),
+    testBtn: $('#testBtn'),
+    testOutput: $('#testOutput'),
+    tpl: $('#itemTemplate')
+  };
+
+  render();
+
+  // --- Create ---
+  els.form.addEventListener('submit', e => {
+    e.preventDefault();
+    const text = els.input.value.trim();
+    if(!text) return;
+    items.push({ id: crypto.randomUUID(), text, done:false, createdAt: Date.now() });
+    els.input.value = '';
+    save();
+    render();
+  });
+
+  // --- Filters ---
+  els.chips.forEach(chip => chip.addEventListener('click', () => {
+    els.chips.forEach(c => c.classList.remove('active'));
+    chip.classList.add('active');
+    filter = chip.dataset.filter;
+    render();
+  }));
+
+  // --- Search ---
+  els.search.addEventListener('input', () => {
+    search = els.search.value.toLowerCase();
+    render();
+  });
+
+  // --- Bulk actions ---
+  els.clearCompleted.addEventListener('click', () => {
+    const before = items.length;
+    items = items.filter(i => !i.done);
+    if(items.length !== before){ save(); render(); }
+  });
+
+  els.deleteAll.addEventListener('click', () => {
+    if(confirm('Delete ALL items? This cannot be undone.')){
+      items = [];
+      save(); render();
+    }
+  });
+
+  els.exportBtn.addEventListener('click', () => {
+    const blob = new Blob([JSON.stringify(items, null, 2)], {type:'application/json'});
+    const url = URL.createObjectURL(blob);
+    const a = Object.assign(document.createElement('a'), {href:url, download:'crud-list.json'});
+    document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+  });
+
+  // --- Render ---
+  function render(){
+    const filtered = items.filter(i =>
+      (filter==='all' || (filter==='active' && !i.done) || (filter==='done' && i.done)) &&
+      (search==='' || i.text.toLowerCase().includes(search))
+    );
+
+    els.list.innerHTML = '';
+    els.empty.style.display = filtered.length === 0 ? 'block' : 'none';
+
+    filtered.forEach(item => els.list.appendChild(renderItem(item)));
+
+    // Stats
+    const completed = items.filter(i=>i.done).length;
+    els.stats.textContent = `${items.length} item${items.length!==1?'s':''} • ${completed} completed`;
+  }
+
+  function renderItem(item){
+    const node = els.tpl.content.firstElementChild.cloneNode(true);
+    node.dataset.id = item.id;
+
+    const checkbox = $('.toggle', node);
+    const titleEl = $('.title', node);
+    const metaEl = $('.meta', node);
+    const editBtn = $('.edit', node);
+    const delBtn = $('.delete', node);
+
+    checkbox.checked = !!item.done;
+    titleEl.textContent = item.text;
+    titleEl.classList.toggle('done', item.done);
+    metaEl.textContent = `added ${timeAgo(item.createdAt)}`;
+
+    // Toggle complete
+    checkbox.addEventListener('change', () => {
+      item.done = checkbox.checked;
+      titleEl.classList.toggle('done', item.done);
+      save(); render();
+    });
+
+    // Edit (double-click or button)
+    const beginEdit = () => startInlineEdit(titleEl, item);
+    titleEl.addEventListener('dblclick', beginEdit);
+    editBtn.addEventListener('click', beginEdit);
+
+    // Delete
+    delBtn.addEventListener('click', () => {
+      if(confirm('Delete this item?')){
+        items = items.filter(i => i.id !== item.id);
+        save(); render();
+      }
+    });
+
+    // Drag & drop reorder (within current filtered view)
+    node.addEventListener('dragstart', ev => {
+      node.classList.add('dragging');
+      ev.dataTransfer.setData('text/plain', item.id);
+    });
+    node.addEventListener('dragend', () => node.classList.remove('dragging'));
+
+    node.addEventListener('dragover', ev => {
+      ev.preventDefault();
+      const dragging = $('.item.dragging');
+      const isAfter = (ev.clientY - node.getBoundingClientRect().top) > node.offsetHeight/2;
+      if(dragging && dragging!==node){
+        node[isAfter ? 'after' : 'before'](dragging);
+      }
+    });
+    node.addEventListener('drop', ev => {
+      ev.preventDefault();
+      reorderByDom();
+      save();
+    });
+
+    return node;
+  }
+
+  function reorderByDom(){
+    const idsInDom = $$('.item').map(li => li.dataset.id);
+    const map = new Map(items.map(i=>[i.id,i]));
+    items = idsInDom.map(id => map.get(id)).filter(Boolean);
+  }
+
+  // --- FIX: robust inline editing without double-finishing
+  function startInlineEdit(titleEl, item){
+    // Replace title with an input
+    const input = document.createElement('input');
+    input.type = 'text'; input.value = item.text; input.className = 'edit-input';
+
+    // Safety: don't try to replace if titleEl already detached
+    if (!titleEl || !titleEl.isConnected) return;
+
+    titleEl.replaceWith(input);
+    input.focus();
+    input.setSelectionRange(item.text.length, item.text.length);
+
+    let finished = false; // guard to prevent double execution from Enter + blur
+
+    const finish = (commit) => {
+      if (finished) return; // run only once
+      finished = true;
+
+      if (commit){
+        const v = input.value.trim();
+        if (v) item.text = v; // keep old if empty
+        save();
+      }
+
+      // Restore title element only if the input is still in the DOM
+      const newTitle = document.createElement('div');
+      newTitle.className = 'title' + (item.done ? ' done' : '');
+      newTitle.textContent = item.text;
+
+      if (input.isConnected && input.parentNode){
+        input.replaceWith(newTitle);
+      } else if (input.parentNode){
+        // Fallback: if somehow still has a parent but not connected, ensure replacement
+        input.parentNode.replaceChild(newTitle, input);
+      }
+
+      // Re-bind dblclick edit on the restored element if it exists in DOM
+      if (newTitle.isConnected){
+        newTitle.addEventListener('dblclick', () => startInlineEdit(newTitle, item));
+      }
+
+      render();
+    };
+
+    const onKeyDown = (e) => {
+      if(e.key === 'Enter') { e.preventDefault(); finish(true); }
+      if(e.key === 'Escape') { e.preventDefault(); finish(false); }
+    };
+
+    const onBlur = () => finish(true);
+
+    input.addEventListener('keydown', onKeyDown);
+    input.addEventListener('blur', onBlur, { once: true }); // blur fires once
+  }
+
+  function save(){
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
+  }
+  function load(){
+    try{
+      const raw = localStorage.getItem(STORAGE_KEY);
+      return raw ? JSON.parse(raw) : [];
+    }catch(e){
+      console.warn('Failed to parse storage, resetting.', e);
+      return [];
+    }
+  }
+
+  function timeAgo(ts){
+    const s = Math.floor((Date.now()-ts)/1000);
+    const mins = Math.floor(s/60), hrs = Math.floor(mins/60), days = Math.floor(hrs/24);
+    if(s < 60) return `${s}s ago`;
+    if(mins < 60) return `${mins}m ago`;
+    if(hrs < 24) return `${hrs}h ago`;
+    return `${days}d ago`;
+  }
+
+  // --- Minimal built-in tests (triggered via the button) ---
+  els.testBtn.addEventListener('click', runTests);
+
+  function runTests(){
+    const out = [];
+    let pass = 0, fail = 0;
+    const ok = (cond, msg) => { (cond ? pass++ : fail++), out.push(`${cond ? '✅' : '❌'} ${msg}`); };
+    const section = (name) => out.push(`\n— ${name} —`);
+
+    // Snapshot current state to avoid persisting test changes
+    const snapshot = {
+      items: JSON.parse(JSON.stringify(items)),
+      listHTML: els.list.innerHTML,
+      statsText: els.stats.textContent,
+      filter,
+      search,
+      storage: localStorage.getItem(STORAGE_KEY)
+    };
+
+    try {
+      section('Setup');
+      items = []; save(); render();
+      ok(items.length === 0, 'Starts with empty list');
+
+      section('Create');
+      els.input.value = 'Test A';
+      els.form.dispatchEvent(new Event('submit', {bubbles:true, cancelable:true}));
+      ok(items.length === 1, 'Add 1 item');
+      ok(els.list.textContent.includes('Test A'), 'UI shows newly added item');
+
+      section('Edit (Enter + blur guard)');
+      const firstTitle = $('.title', els.list);
+      startInlineEdit(firstTitle, items[0]);
+      const editInput = $('.edit-input', els.list);
+      editInput.value = 'Edited';
+      // Simulate Enter, which would also cause blur
+      editInput.dispatchEvent(new KeyboardEvent('keydown', {key:'Enter', bubbles:true}));
+      editInput.dispatchEvent(new Event('blur', {bubbles:true}));
+      ok(items[0].text === 'Edited', 'Item text saved after Enter');
+      ok($('.title', els.list).textContent === 'Edited', 'UI updated with edited text');
+
+      section('Edit cancel (Escape)');
+      const t2 = $('.title', els.list);
+      startInlineEdit(t2, items[0]);
+      const editInput2 = $('.edit-input', els.list);
+      editInput2.value = 'ShouldNotSave';
+      editInput2.dispatchEvent(new KeyboardEvent('keydown', {key:'Escape', bubbles:true}));
+      editInput2.dispatchEvent(new Event('blur', {bubbles:true}));
+      ok(items[0].text === 'Edited', 'Escape keeps previous text');
+
+      section('Toggle complete');
+      const cb = $('.toggle', els.list);
+      cb.click();
+      ok(items[0].done === true, 'Checkbox toggles done -> true');
+
+      section('Delete');
+      const oldConfirm = window.confirm; window.confirm = () => true;
+      $('.delete', els.list).click();
+      window.confirm = oldConfirm;
+      ok(items.length === 0, 'Item deleted');
+
+    } catch (err){
+      out.push(`\n💥 Test run threw: ${err && err.message ? err.message : err}`);
+      fail++;
+    } finally {
+      // Restore snapshot
+      items = snapshot.items; filter = snapshot.filter; search = snapshot.search;
+      localStorage.setItem(STORAGE_KEY, snapshot.storage);
+      render();
+      // Restore stats text if needed (render overwrites anyway)
+    }
+
+    out.push(`\nSummary: ${pass} passed, ${fail} failed`);
+    els.testOutput.textContent = out.join('\n');
+    // Open the details element to show results
+    const det = $('#tests'); if (det && !det.open) det.open = true;
+  }
+  </script>
+</body>
+</html>
+
+
+<!-- ===== Deployment Pack: GitHub Pages ===== -->
+
+<!-- Add these two files at the project root next to index.html -->
+
+====================
+FILE: .nojekyll
+--------------------
+# (Leave this file empty.)
+# Purpose: disables GitHub Pages' default Jekyll processing so your asset paths work as-is.
+
+====================
+FILE: README.md
+--------------------
+# CRUD List — GitHub Pages Deployment
+
+This folder is ready to publish as a static site on GitHub Pages.
+
+## Quick start
+1. Create a new GitHub repository (public is fine).
+2. Upload these files at the repository **root**:
+   - `index.html` (your app — already in this repo)
+   - `.nojekyll` (empty file)
+   - `README.md` (this file)
+3. Commit and push.
+4. Go to **Settings → Pages**.
+   - **Source**: `Deploy from a branch`
+   - **Branch**: `main` (or `master`) and **Folder**: `/ (root)`
+5. Click **Save**. After ~30–120 seconds, you’ll get a live URL like:
+   `https://<your-username>.github.io/<repo-name>/`
+
+## Local preview (optional)
+```bash
+# from the project root
+python -m http.server 8000
+# then open http://localhost:8000
+```
+
+## Notes
+- All paths in the app are relative, so it will work under `/repo-name/` on Pages.
+- Data persists via `localStorage`. No server required.
+- If you later add route-like URLs, also add a `404.html` that redirects to `index.html`.
+
+## Troubleshooting
+- **Blank page on GitHub Pages:** ensure `.nojekyll` exists at the repo root.
+- **Assets not loading:** confirm files are in the root and paths are relative (no leading `/`).
+- **Edits not appearing:** hard refresh (`Ctrl/Cmd+Shift+R`) or wait a minute for cache to update.
+
+---
+
+### Changelog
+- 2025-08-12: Added deployment pack (.nojekyll and README) and fixed inline-edit double-submit guard.
